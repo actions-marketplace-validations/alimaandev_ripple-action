@@ -1,7 +1,7 @@
 # Ripple — PR risk gate
 
 [![GitHub](https://img.shields.io/badge/GitHub-ripple--action-181717?logo=github&style=for-the-badge)](https://github.com/alimaandev/ripple-action)
-[![Marketplace](https://img.shields.io/badge/GitHub%20Actions-Marketplace-2088FF?logo=githubactions&style=for-the-badge)](https://github.com/marketplace?query=ripple)
+[![Marketplace](https://img.shields.io/badge/GitHub%20Actions-Marketplace-2088FF?logo=githubactions&style=for-the-badge)](https://github.com/marketplace/actions/ripple-pr-risk-gate)
 [![License: MIT](https://img.shields.io/github/license/alimaandev/ripple-action?style=for-the-badge)](LICENSE)
 
 **Your AI agent's PR passed tests and still broke 37 routes. Ripple blocks
