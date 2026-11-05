@@ -4,14 +4,16 @@
 [![Marketplace](https://img.shields.io/badge/GitHub%20Actions-Marketplace-2088FF?logo=githubactions&style=for-the-badge)](https://github.com/marketplace?query=ripple)
 [![License: MIT](https://img.shields.io/github/license/alimaandev/ripple-action?style=for-the-badge)](LICENSE)
 
-**Ripple is the CI gate that knows the blast radius — every PR is
-risk-scored before AI (or anyone) breaks your codebase.**
+**Your AI agent's PR passed tests and still broke 37 routes. Ripple blocks
+the merge before that happens.**
 
 This action runs [Ripple](https://github.com/alimaandev/ripple)'s diff gate
 on every pull request. Every changed source file is scored for blast radius
 (how many files, routes, tests and components depend on it), and the job
 fails when any change crosses the gate — while `::error`/`::warning`
 annotations appear directly on the PR's Files tab.
+
+No token, no cloud processing, no telemetry. One step in your workflow.
 
 ## Usage
 
@@ -37,7 +39,8 @@ full breakdown.
 
 ### SARIF → Code Scanning
 
-The action writes `ripple.sarif` (SARIF 2.1.0) by default. Feed it to
+The action writes `ripple.sarif` (SARIF 2.1.0) by default, including when the
+gate blocks, so the findings still appear in Code Scanning. Feed it to
 [Code Scanning](https://docs.github.com/en/code-security/code-scanning)
 with the official uploader:
 
@@ -62,17 +65,30 @@ with the official uploader:
             src/generated/**
 ```
 
+### Monorepos
+
+Run the gate against one package by setting `working-directory`. Ripple still
+resolves git paths from the repository root, so annotations and SARIF point at
+the correct repository-relative files:
+
+```yaml
+      - uses: alimaandev/ripple-action@v1
+        with:
+          working-directory: packages/app
+```
+
 ## Inputs
 
-| Input           | Default     | Description                                                              |
-| --------------- | ----------- | ------------------------------------------------------------------------ |
-| `version`       | `latest`    | Ripple npm version to run (dist-tag or exact version). Pin for stability |
-| `base`          | _(auto)_    | Git ref to diff against (`origin/main`, `main`, `HEAD~1` are tried)      |
-| `gate`          | `high`      | Risk level that blocks: `medium`, `high`, `critical`                     |
-| `allow`         | _(empty)_   | Newline-separated globs of changed files that never block the gate       |
-| `annotate`      | `true`      | Emit `::error`/`::warning` annotations on the PR Files tab               |
-| `upload-sarif`  | `true`      | Write a SARIF 2.1.0 report for Code Scanning                             |
-| `sarif-path`    | `ripple.sarif` | Where to write the SARIF report                                       |
+| Input               | Default        | Description                                                              |
+| ------------------- | -------------- | ------------------------------------------------------------------------ |
+| `version`           | `0.7.1`        | Ripple npm version to run (dist-tag or exact version). Pin for stability |
+| `working-directory` | `.`            | Directory to run Ripple in, relative to the repository root              |
+| `base`              | _(auto)_       | Git ref to diff against (`origin/main`, `main`, `HEAD~1` are tried)      |
+| `gate`              | `high`         | Risk level that blocks: `medium`, `high`, `critical`                     |
+| `allow`             | _(empty)_      | Newline-separated globs of changed files that never block the gate       |
+| `annotate`          | `true`         | Emit `::error`/`::warning` annotations on the PR Files tab               |
+| `upload-sarif`      | `true`         | Write a SARIF 2.1.0 report for Code Scanning                             |
+| `sarif-path`        | `ripple.sarif` | Where to write the SARIF report                                          |
 
 ## Outputs
 

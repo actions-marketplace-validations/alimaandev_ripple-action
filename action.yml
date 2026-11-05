@@ -1,5 +1,5 @@
 name: "Ripple — PR risk gate"
-description: "Risk-score every change set before it merges. Ripple gates the PR, annotates risky files on the Files tab, and can emit SARIF for Code Scanning."
+description: "Block risky pull requests by blast radius. Annotate affected files and emit SARIF for Code Scanning."
 author: alimaandev
 branding:
   icon: "shield"
@@ -7,7 +7,10 @@ branding:
 inputs:
   version:
     description: "Ripple npm version to run (dist-tag or exact version)"
-    default: "latest"
+    default: "0.7.1"
+  working-directory:
+    description: "Directory to run Ripple in, relative to the repository root"
+    default: "."
   base:
     description: "Git ref to diff against (default: origin/main, main, HEAD~1)"
     default: ""

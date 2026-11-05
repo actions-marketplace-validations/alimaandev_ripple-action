@@ -36,8 +36,31 @@ function appendSummary(text) {
   }
 }
 
+function workspaceDir() {
+  return env("GITHUB_WORKSPACE", process.cwd());
+}
+
+function runDirectory() {
+  const input = env("INPUT_WORKING_DIRECTORY", ".").trim() || ".";
+  return path.resolve(workspaceDir(), input);
+}
+
+function repositoryPath(file) {
+  const absolute = path.resolve(runDirectory(), file);
+  const relative = path.relative(workspaceDir(), absolute);
+  return (relative || file).split(path.sep).join("/");
+}
+
+function escapeData(value) {
+  return String(value).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+
+function escapeProperty(value) {
+  return escapeData(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
+}
+
 function runRipple(format) {
-  const args = ["--yes", `@alimaandev/ripple@${env("INPUT_VERSION", "latest")}`];
+  const args = ["--yes", `@alimaandev/ripple@${env("INPUT_VERSION", "0.7.1")}`];
   args.push("diff", "--format", format);
   const base = env("INPUT_BASE");
   if (base) args.push("--base", base);
@@ -49,7 +72,7 @@ function runRipple(format) {
   }
   const command = `npx ${args.map((arg) => `"${String(arg).replace(/"/g, '\\"')}"`).join(" ")}`;
   return spawnSync(command, {
-    cwd: env("GITHUB_WORKSPACE", process.cwd()),
+    cwd: runDirectory(),
     encoding: "utf8",
     env: { ...process.env, NO_COLOR: "1" },
     shell: true,
@@ -67,7 +90,12 @@ function blocks(file, gateLevel) {
 function annotation(file, gateLevel) {
   const level = blocks(file, gateLevel) ? "error" : "warning";
   const score = file.risk.score;
-  return `::${level} file=${file.file},title=Ripple ${file.risk.level}::${file.risk.level} risk (score ${score}) — ${file.affectedFiles} affected file(s)`;
+  const filePath = escapeProperty(repositoryPath(file.file));
+  const title = escapeProperty(`Ripple ${file.risk.level}`);
+  const message = escapeData(
+    `${file.risk.level} risk (score ${score}) — ${file.affectedFiles} affected file(s)`,
+  );
+  return `::${level} file=${filePath},title=${title}::${message}`;
 }
 
 function summaryMarkdown(parsed, blocked) {
@@ -129,13 +157,26 @@ appendSummary(summaryMarkdown(parsed, blocked));
 
 if (env("INPUT_UPLOAD_SARIF", "true").toLowerCase() === "true") {
   const sarif = runRipple("sarif");
-  if (sarif.status === 0 && sarif.stdout.trim()) {
-    const sarifFile = path.join(env("GITHUB_WORKSPACE", process.cwd()), env("INPUT_SARIF_PATH", "ripple.sarif"));
+  const sarifPath = env("INPUT_SARIF_PATH", "ripple.sarif");
+  let validSarif = false;
+  if (!sarif.error && sarif.stdout.trim()) {
+    try {
+      const parsedSarif = JSON.parse(sarif.stdout);
+      validSarif = Boolean(parsedSarif && parsedSarif.version && Array.isArray(parsedSarif.runs));
+    } catch {
+      validSarif = false;
+    }
+  }
+  if (validSarif) {
+    const sarifFile = path.resolve(workspaceDir(), sarifPath);
+    fs.mkdirSync(path.dirname(sarifFile), { recursive: true });
     fs.writeFileSync(sarifFile, sarif.stdout);
-    setOutput("sarif-path", env("INPUT_SARIF_PATH", "ripple.sarif"));
+    setOutput("sarif-path", sarifPath);
     console.log("ripple: SARIF report written — add actions/upload-sarif to publish it to Code Scanning.");
   } else {
     console.warn("ripple: could not produce the SARIF report — skipping.");
+    if (sarif.error) console.warn(sarif.error.message);
+    if (sarif.stderr && sarif.stderr.trim()) console.warn(sarif.stderr.trim());
   }
 }
 
